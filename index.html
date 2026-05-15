@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>组队接龙</title>
+  <style>
+    :root {
+      --bg: #0c0c18;
+      --panel: #1b1b33;
+      --panel-2: #22213d;
+      --line: #302f55;
+      --primary: #7567ff;
+      --primary-2: #5f51ee;
+      --text: #f3f4ff;
+      --muted: #8e90a8;
+      --chip: #2d2d4d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      width: min(680px, 100%);
+      margin: 0 auto;
+      min-height: 100vh;
+      background: #111124;
+      border-left: 1px solid #15152a;
+      border-right: 1px solid #15152a;
+    }
+
+    header {
+      padding: 36px 24px 28px;
+      text-align: center;
+      background: linear-gradient(180deg, #1d2748 0%, #18213d 100%);
+      border-bottom: 1px solid #263056;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 1px;
+    }
+
+    header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .save-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      padding: 16px 22px;
+      background: var(--panel-2);
+      border-bottom: 1px solid var(--line);
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid #494777;
+      border-radius: 10px;
+      background: #252440;
+      color: var(--text);
+      padding: 12px 14px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    input:focus, textarea:focus { border-color: var(--primary); }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 0 20px;
+      color: white;
+      background: linear-gradient(180deg, var(--primary) 0%, var(--primary-2) 100%);
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); opacity: .88; }
+    button.ghost { background: transparent; color: var(--muted); }
+    button.full { height: 50px; }
+
+    nav {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: #1d1c32;
+      border-bottom: 1px solid var(--line);
+    }
+
+    nav button {
+      height: 56px;
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      border-bottom: 3px solid transparent;
+    }
+
+    nav button.active {
+      color: #a89fff;
+      border-bottom-color: var(--primary);
+    }
+
+    main { padding: 18px; }
+
+    .admin-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .form-card, .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(0,0,0,.18);
+    }
+
+    .form-card {
+      padding: 18px;
+      display: none;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .form-card.show { display: grid; }
+
+    .card {
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+
+    .card-body { padding: 18px 20px 14px; }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--chip);
+      color: #aaaac0;
+      font-size: 14px;
+    }
+
+    .desc {
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .card-footer {
+      padding: 12px 20px;
+      color: #6f718a;
+      background: rgba(255,255,255,.025);
+      border-top: 1px solid rgba(255,255,255,.035);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+
+    .join-btn {
+      height: 42px;
+      margin-top: 14px;
+      width: 100%;
+      display: none;
+    }
+
+    .card.open .join-btn { display: block; }
+
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 48px 12px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%);
+      background: #2b2a4a;
+      border: 1px solid #494777;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, bottom .2s ease;
+    }
+
+    .toast.show { opacity: 1; bottom: 40px; }
+
+    @media (max-width: 560px) {
+      .save-row, .admin-row { grid-template-columns: 1fr; }
+      .save-row button, .admin-row button { height: 46px; }
+      main { padding: 14px; }
+      header h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🎮 组队接龙</h1>
+      <p>Steam游戏组队 · 随时开黑</p>
+    </header>
+
+    <section class="save-row">
+      <input id="nickname" placeholder="你的昵称" />
+      <input id="steamId" placeholder="Steam ID" />
+      <button onclick="saveProfile()">保存</button>
+    </section>
+
+    <nav>
+      <button class="active" onclick="switchTab('list', this)">📋 接龙列表</button>
+      <button onclick="switchTab('create', this)">➕ 发起接龙</button>
+      <button onclick="switchTab('mine', this)">🗂 我的接龙</button>
+    </nav>
+
+    <main>
+      <div class="admin-row">
+        <input id="adminPassword" type="password" placeholder="管理员密码" />
+        <button class="full" onclick="unlockAdmin()">🔐 解锁管理</button>
+      </div>
+
+      <section id="createForm" class="form-card">
+        <input id="game" placeholder="游戏名称，例如：深海迷航 2" />
+        <input id="time" placeholder="开黑时间，例如：今晚任意时间" />
+        <input id="limit" type="number" min="2" placeholder="人数上限，例如：4" />
+        <textarea id="desc" rows="3" placeholder="备注，例如：验垃圾、尽量不跳车"></textarea>
+        <button class="full" onclick="createRoom()">发布接龙</button>
+      </section>
+
+      <section id="rooms"></section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const ADMIN_PASSWORD = '123456';
+    let isAdmin = false;
+    let activeTab = 'list';
+    let openedId = null;
+
+    const defaultRooms = [
+      { id: 1, game: '菜市场模拟器', time: '5.15日 19.00', limit: 4, desc: '4人满车', createdAt: '2026-05-15 10:35', members: ['阿杰', 'Leics', '小唐', 'Gary'] },
+      { id: 2, game: '深海迷航 2', time: '今晚任意时间', limit: 4, desc: '验垃圾', createdAt: '2026-05-15 09:35', members: ['Leics', 'Ming', 'Alex'] },
+      { id: 3, game: '雾锁王国/英灵神殿', time: '商议决定', limit: 4, desc: '开荒，尽量不跳车，打到通关，关死亡掉落，150%掉落率', createdAt: '2026-05-15 00:38', members: ['Ray', 'Kiki'] }
+    ];
+
+    let rooms = JSON.parse(localStorage.getItem('rooms') || 'null') || defaultRooms;
+
+    const $ = id => document.getElementById(id);
+
+    function persist() {
+      localStorage.setItem('rooms', JSON.stringify(rooms));
+    }
+
+    function toast(msg) {
+      const el = $('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 1600);
+    }
+
+    function saveProfile() {
+      localStorage.setItem('profile', JSON.stringify({
+        nickname: $('nickname').value.trim(),
+        steamId: $('steamId').value.trim()
+      }));
+      toast('已保存资料');
+    }
+
+    function loadProfile() {
+      const profile = JSON.parse(localStorage.getItem('profile') || '{}');
+      $('nickname').value = profile.nickname || '';
+      $('steamId').value = profile.steamId || '';
+    }
+
+    function switchTab(tab, btn) {
+      activeTab = tab;
+      openedId = null;
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      $('createForm').classList.toggle('show', tab === 'create');
+      render();
+    }
+
+    function unlockAdmin() {
+      if ($('adminPassword').value === ADMIN_PASSWORD) {
+        isAdmin = true;
+        toast('管理员已解锁');
+        render();
+      } else {
+        toast('密码错误');
+      }
+    }
+
+    function createRoom() {
+      const game = $('game').value.trim();
+      const time = $('time').value.trim();
+      const limit = Number($('limit').value);
+      const desc = $('desc').value.trim();
+      const profile = JSON.parse(localStorage.getItem('profile') || '{}');
+      const name = profile.nickname || '匿名玩家';
+
+      if (!game || !time || !limit) return toast('请补全游戏、时间和人数');
+
+      rooms.unshift({
+        id: Date.now(),
+        game,
+        time,
+        limit,
+        desc,
+        createdAt: new Date().toLocaleString('zh-CN', { hour12: false }).replaceAll('/', '-'),
+        members: [name]
+      });
+      persist();
+      ['game', 'time', 'limit', 'desc'].forEach(id => $(id).value = '');
+      toast('接龙已发布');
+      render();
+    }
+
+    function joinRoom(id) {
+      const profile = JSON.parse(localStorage.getItem('profile') || '{}');
+      const name = profile.nickname || $('nickname').value.trim();
+      if (!name) return toast('先填写昵称');
+
+      const room = rooms.find(r => r.id === id);
+      if (room.members.includes(name)) return toast('你已经报名了');
+      if (room.members.length >= room.limit) return toast('车满了，下次请早');
+
+      room.members.push(name);
+      persist();
+      toast('报名成功');
+      render();
+    }
+
+    function removeRoom(id) {
+      if (!isAdmin) return;
+      rooms = rooms.filter(r => r.id !== id);
+      persist();
+      toast('已删除');
+      render();
+    }
+
+    function visibleRooms() {
+      const profile = JSON.parse(localStorage.getItem('profile') || '{}');
+      if (activeTab === 'mine') {
+        return rooms.filter(r => r.members.includes(profile.nickname));
+      }
+      return rooms;
+    }
+
+    function render() {
+      const list = visibleRooms();
+      const container = $('rooms');
+      if (!list.length) {
+        container.innerHTML = '<div class="empty">暂无接龙</div>';
+        return;
+      }
+
+      container.innerHTML = list.map(room => {
+        const full = room.members.length >= room.limit;
+        const open = openedId === room.id ? 'open' : '';
+        return `
+          <article class="card ${open}" onclick="openedId = openedId === ${room.id} ? null : ${room.id}; render();">
+            <div class="card-body">
+              <h2>${escapeHtml(room.game)}</h2>
+              <div class="chips">
+                <span class="chip">🕘 ${escapeHtml(room.time)}</span>
+                <span class="chip">👥 ${room.members.length}人已报名</span>
+                ${full ? '<span class="chip">满车</span>' : ''}
+              </div>
+              <p class="desc">${escapeHtml(room.desc || '无备注')}</p>
+              <button class="join-btn" onclick="event.stopPropagation(); joinRoom(${room.id})">${full ? '已满员' : '加入接龙'}</button>
+              ${isAdmin ? `<button class="join-btn" onclick="event.stopPropagation(); removeRoom(${room.id})">管理员删除</button>` : ''}
+            </div>
+            <div class="card-footer">
+              <span>${escapeHtml(room.createdAt)}</span>
+              <span>${room.members.map(escapeHtml).join('、')}</span>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[s]));
+    }
+
+    loadProfile();
+    render();
+  </script>
+</body>
+</html>
