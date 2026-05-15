@@ -12,6 +12,9 @@
       --line: #302f55;
       --primary: #7567ff;
       --primary-2: #5f51ee;
+      --success: #10b981;
+      --success-2: #059669;
+      --danger: #b91c1c;
       --text: #f3f4ff;
       --muted: #8e90a8;
       --chip: #2d2d4d;
@@ -37,7 +40,7 @@
     }
 
     header {
-      padding: 36px 24px 28px;
+      padding: 36px 24px 26px;
       text-align: center;
       background: linear-gradient(180deg, #1d2748 0%, #18213d 100%);
       border-bottom: 1px solid #263056;
@@ -91,7 +94,7 @@
 
     button:hover { transform: translateY(-1px); }
     button:active { transform: translateY(0); opacity: .88; }
-    button.ghost { background: transparent; color: var(--muted); }
+    button:disabled { cursor: not-allowed; opacity: .55; transform: none; }
     button.full { height: 50px; }
 
     nav {
@@ -123,7 +126,7 @@
       margin-bottom: 18px;
     }
 
-    .form-card, .card {
+    .form-card, .card, .detail-card, .member-card, .back-card, .status-card {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 16px;
@@ -147,7 +150,7 @@
 
     .card-body { padding: 18px 20px 14px; }
 
-    .card h2 {
+    .card h2, .detail-card h2 {
       margin: 0 0 12px;
       font-size: 20px;
     }
@@ -156,7 +159,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
 
     .chip {
@@ -174,6 +177,9 @@
       color: var(--muted);
       line-height: 1.6;
       margin: 0;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.045);
     }
 
     .card-footer {
@@ -188,16 +194,82 @@
       font-size: 14px;
     }
 
-    .join-btn {
-      height: 42px;
-      margin-top: 14px;
-      width: 100%;
-      display: none;
+    .detail-card {
+      padding: 22px;
+      margin-bottom: 18px;
     }
 
-    .card.open .join-btn { display: block; }
+    .join-primary {
+      width: 100%;
+      height: 70px;
+      margin-bottom: 18px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, var(--success) 0%, var(--success-2) 100%);
+      box-shadow: 0 12px 30px rgba(16,185,129,.22);
+      font-size: 17px;
+    }
 
-    .empty {
+    .member-card {
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+
+    .member-card h3 {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .member-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 48px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.045);
+    }
+
+    .member-index {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      flex: 0 0 auto;
+    }
+
+    .member-name { font-weight: 700; }
+
+    .member-steam {
+      color: #74768d;
+      font-size: 14px;
+    }
+
+    .back-card {
+      width: 100%;
+      height: 58px;
+      background: #282742;
+      color: var(--muted);
+    }
+
+    .delete-btn {
+      width: 100%;
+      height: 48px;
+      margin-top: 14px;
+      background: var(--danger);
+    }
+
+    .empty, .status-card {
       color: var(--muted);
       text-align: center;
       padding: 48px 12px;
@@ -216,6 +288,7 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity .2s ease, bottom .2s ease;
+      z-index: 99;
     }
 
     .toast.show { opacity: 1; bottom: 40px; }
@@ -225,6 +298,7 @@
       .save-row button, .admin-row button { height: 46px; }
       main { padding: 14px; }
       header h1 { font-size: 24px; }
+      .join-primary { height: 58px; }
     }
   </style>
 </head>
@@ -266,37 +340,32 @@
   </div>
 
   <div id="toast" class="toast"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    const SUPABASE_URL = 'https://pbvwxxlswivhjurjvbeq.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_QVP6B4riaxQOmCwa_aWt6g_3jZQmn8L';
+
     const supabaseClient = window.supabase.createClient(
-      'https://pbvwxxlswivhjurjvbeq.supabase.co',
-      'sb_publishable_QVP6B4riaxQOmCwa_aWt6g_3jZQmn8L'
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
     );
+
     const ADMIN_PASSWORD = '123456';
     let isAdmin = false;
     let activeTab = 'list';
-    let openedId = null;
-
-    const defaultRooms = [
-      { id: 1, game: '菜市场模拟器', time: '5.15日 19.00', limit: 4, desc: '4人满车', createdAt: '2026-05-15 10:35', members: ['阿杰', 'Leics', '小唐', 'Gary'] },
-      { id: 2, game: '深海迷航 2', time: '今晚任意时间', limit: 4, desc: '验垃圾', createdAt: '2026-05-15 09:35', members: ['Leics', 'Ming', 'Alex'] },
-      { id: 3, game: '雾锁王国/英灵神殿', time: '商议决定', limit: 4, desc: '开荒，尽量不跳车，打到通关，关死亡掉落，150%掉落率', createdAt: '2026-05-15 00:38', members: ['Ray', 'Kiki'] }
-    ];
-
-    let rooms = JSON.parse(localStorage.getItem('rooms') || 'null') || defaultRooms;
+    let currentView = 'list';
+    let selectedRoomId = null;
+    let rooms = [];
+    let isLoading = true;
 
     const $ = id => document.getElementById(id);
-
-    function persist() {
-      localStorage.setItem('rooms', JSON.stringify(rooms));
-    }
 
     function toast(msg) {
       const el = $('toast');
       el.textContent = msg;
       el.classList.add('show');
-      setTimeout(() => el.classList.remove('show'), 1600);
+      setTimeout(() => el.classList.remove('show'), 1800);
     }
 
     function saveProfile() {
@@ -313,9 +382,18 @@
       $('steamId').value = profile.steamId || '';
     }
 
+    function getProfile() {
+      const saved = JSON.parse(localStorage.getItem('profile') || '{}');
+      return {
+        nickname: saved.nickname || $('nickname').value.trim(),
+        steamId: saved.steamId || $('steamId').value.trim()
+      };
+    }
+
     function switchTab(tab, btn) {
       activeTab = tab;
-      openedId = null;
+      currentView = 'list';
+      selectedRoomId = null;
       document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       $('createForm').classList.toggle('show', tab === 'create');
@@ -332,65 +410,188 @@
       }
     }
 
-    function createRoom() {
+    async function loadRooms() {
+      isLoading = true;
+      render();
+
+      const { data, error } = await supabaseClient
+        .from('rooms')
+        .select('id, game, time, limit_count, description, created_by, created_at, members(id, nickname, steam_id, joined_at)')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error(error);
+        isLoading = false;
+        toast('读取接龙失败');
+        render();
+        return;
+      }
+
+      rooms = (data || []).map(room => ({
+        id: room.id,
+        game: room.game,
+        time: room.time,
+        limit: room.limit_count,
+        desc: room.description || '',
+        createdBy: room.created_by || '',
+        createdAt: formatDate(room.created_at),
+        members: (room.members || [])
+          .sort((a, b) => new Date(a.joined_at) - new Date(b.joined_at))
+          .map(member => ({
+            id: member.id,
+            nickname: member.nickname,
+            steamId: member.steam_id || ''
+          }))
+      }));
+
+      isLoading = false;
+      render();
+    }
+
+    async function createRoom() {
       const game = $('game').value.trim();
       const time = $('time').value.trim();
       const limit = Number($('limit').value);
       const desc = $('desc').value.trim();
-      const profile = JSON.parse(localStorage.getItem('profile') || '{}');
-      const name = profile.nickname || '匿名玩家';
+      const profile = getProfile();
 
+      if (!profile.nickname) return toast('先填写昵称');
       if (!game || !time || !limit) return toast('请补全游戏、时间和人数');
 
-      rooms.unshift({
-        id: Date.now(),
-        game,
-        time,
-        limit,
-        desc,
-        createdAt: new Date().toLocaleString('zh-CN', { hour12: false }).replaceAll('/', '-'),
-        members: [name]
-      });
-      persist();
+      const { data: room, error: roomError } = await supabaseClient
+        .from('rooms')
+        .insert({
+          game,
+          time,
+          limit_count: limit,
+          description: desc,
+          created_by: profile.nickname
+        })
+        .select('id')
+        .single();
+
+      if (roomError) {
+        console.error(roomError);
+        toast('发布失败');
+        return;
+      }
+
+      const { error: memberError } = await supabaseClient
+        .from('members')
+        .insert({
+          room_id: room.id,
+          nickname: profile.nickname,
+          steam_id: profile.steamId || null
+        });
+
+      if (memberError) {
+        console.error(memberError);
+        toast('房间已创建，但加入失败');
+      } else {
+        toast('接龙已发布');
+      }
+
       ['game', 'time', 'limit', 'desc'].forEach(id => $(id).value = '');
-      toast('接龙已发布');
+      await loadRooms();
+    }
+
+    function openRoomDetail(id) {
+      selectedRoomId = id;
+      currentView = 'detail';
+      $('createForm').classList.remove('show');
       render();
     }
 
-    function joinRoom(id) {
-      const profile = JSON.parse(localStorage.getItem('profile') || '{}');
-      const name = profile.nickname || $('nickname').value.trim();
-      if (!name) return toast('先填写昵称');
+    function backToList() {
+      selectedRoomId = null;
+      currentView = 'list';
+      $('createForm').classList.toggle('show', activeTab === 'create');
+      render();
+    }
+
+    async function joinRoom(id) {
+      const profile = getProfile();
+      if (!profile.nickname) return toast('先填写昵称');
 
       const room = rooms.find(r => r.id === id);
-      if (room.members.includes(name)) return toast('你已经报名了');
+      if (!room) return toast('接龙不存在');
+      if (room.members.some(m => m.nickname === profile.nickname || (profile.steamId && m.steamId === profile.steamId))) {
+        return toast('你已经报名了');
+      }
       if (room.members.length >= room.limit) return toast('车满了，下次请早');
 
-      room.members.push(name);
-      persist();
+      const { error } = await supabaseClient
+        .from('members')
+        .insert({
+          room_id: id,
+          nickname: profile.nickname,
+          steam_id: profile.steamId || null
+        });
+
+      if (error) {
+        console.error(error);
+        toast(error.code === '23505' ? '你已经报名了' : '报名失败');
+        return;
+      }
+
       toast('报名成功');
-      render();
+      await loadRooms();
     }
 
-    function removeRoom(id) {
+    async function removeRoom(id) {
       if (!isAdmin) return;
-      rooms = rooms.filter(r => r.id !== id);
-      persist();
+      const { error } = await supabaseClient
+        .from('rooms')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error(error);
+        toast('删除失败');
+        return;
+      }
+
+      selectedRoomId = null;
+      currentView = 'list';
       toast('已删除');
-      render();
+      await loadRooms();
+    }
+
+    function subscribeRealtime() {
+      supabaseClient
+        .channel('steam-team-lobby-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, loadRooms)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, loadRooms)
+        .subscribe(status => {
+          if (status === 'SUBSCRIBED') console.log('Realtime connected');
+        });
     }
 
     function visibleRooms() {
-      const profile = JSON.parse(localStorage.getItem('profile') || '{}');
+      const profile = getProfile();
       if (activeTab === 'mine') {
-        return rooms.filter(r => r.members.includes(profile.nickname));
+        return rooms.filter(r => r.members.some(m => m.nickname === profile.nickname || (profile.steamId && m.steamId === profile.steamId)));
       }
       return rooms;
     }
 
     function render() {
-      const list = visibleRooms();
+      if (currentView === 'detail') {
+        renderRoomDetail();
+        return;
+      }
+      renderRoomList();
+    }
+
+    function renderRoomList() {
       const container = $('rooms');
+
+      if (isLoading) {
+        container.innerHTML = '<div class="status-card">正在读取接龙...</div>';
+        return;
+      }
+
+      const list = visibleRooms();
       if (!list.length) {
         container.innerHTML = '<div class="empty">暂无接龙</div>';
         return;
@@ -398,9 +599,8 @@
 
       container.innerHTML = list.map(room => {
         const full = room.members.length >= room.limit;
-        const open = openedId === room.id ? 'open' : '';
         return `
-          <article class="card ${open}" onclick="openedId = openedId === ${room.id} ? null : ${room.id}; render();">
+          <article class="card" onclick="openRoomDetail(${room.id})">
             <div class="card-body">
               <h2>${escapeHtml(room.game)}</h2>
               <div class="chips">
@@ -409,16 +609,66 @@
                 ${full ? '<span class="chip">满车</span>' : ''}
               </div>
               <p class="desc">${escapeHtml(room.desc || '无备注')}</p>
-              <button class="join-btn" onclick="event.stopPropagation(); joinRoom(${room.id})">${full ? '已满员' : '加入接龙'}</button>
-              ${isAdmin ? `<button class="join-btn" onclick="event.stopPropagation(); removeRoom(${room.id})">管理员删除</button>` : ''}
             </div>
             <div class="card-footer">
               <span>${escapeHtml(room.createdAt)}</span>
-              <span>${room.members.map(escapeHtml).join('、')}</span>
+              <span>${room.members.map(m => escapeHtml(m.nickname)).join('、')}</span>
             </div>
           </article>
         `;
       }).join('');
+    }
+
+    function renderRoomDetail() {
+      const room = rooms.find(r => r.id === selectedRoomId);
+      const container = $('rooms');
+
+      if (isLoading) {
+        container.innerHTML = '<div class="status-card">正在读取详情...</div>';
+        return;
+      }
+
+      if (!room) {
+        container.innerHTML = '<div class="empty">接龙不存在</div><button class="back-card" onclick="backToList()">← 返回列表</button>';
+        return;
+      }
+
+      const full = room.members.length >= room.limit;
+      container.innerHTML = `
+        <section class="detail-card">
+          <h2>${escapeHtml(room.game)}</h2>
+          <div class="chips">
+            <span class="chip">🕘 ${escapeHtml(room.time)}</span>
+            <span class="chip">📅 ${escapeHtml(room.createdAt)}</span>
+          </div>
+          <p class="desc">${escapeHtml(room.desc || '无备注')}</p>
+          ${isAdmin ? `<button class="delete-btn" onclick="removeRoom(${room.id})">管理员删除接龙</button>` : ''}
+        </section>
+
+        <button class="join-primary" onclick="joinRoom(${room.id})" ${full ? 'disabled' : ''}>🎯 ${full ? '接龙已满' : '一键加入接龙'}</button>
+
+        <section class="member-card">
+          <h3>已报名 ${room.members.length} 人</h3>
+          <div class="member-list">
+            ${room.members.map((member, index) => `
+              <div class="member-item">
+                <span class="member-index">${index + 1}</span>
+                <span class="member-name">${escapeHtml(member.nickname)}</span>
+                <span class="member-steam">${escapeHtml(member.steamId || '未填写Steam ID')}</span>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+
+        <button class="back-card" onclick="backToList()">← 返回列表</button>
+      `;
+    }
+
+    function formatDate(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      const pad = n => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
     function escapeHtml(value) {
@@ -428,7 +678,8 @@
     }
 
     loadProfile();
-    render();
+    loadRooms();
+    subscribeRealtime();
   </script>
 </body>
 </html>
